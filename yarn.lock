@@ -3595,7 +3595,7 @@
     lz-string "^1.4.4"
     pretty-format "^26.6.2"
 
-"@testing-library/react@^11.1.1":
+"@testing-library/react@^11.1.2":
   version "11.1.2"
   resolved "https://registry.yarnpkg.com/@testing-library/react/-/react-11.1.2.tgz#089b06d3828e76fc1ff0092dd69c7b59c454c998"
   integrity sha512-foL0/Mo68M51DdgFwEsO2SDEkUpocuEYidOTcJACGEcoakZDINuERYwVdd6T5e3pPE+BZyGwwURaXcrX1v9RbQ==
@@ -4206,10 +4206,10 @@
     "@types/express-serve-static-core" "*"
     "@types/mime" "*"
 
-"@types/sharp@^0.26.0":
-  version "0.26.0"
-  resolved "https://registry.yarnpkg.com/@types/sharp/-/sharp-0.26.0.tgz#2fa8419dbdaca8dd38f73888b27b207f188a8669"
-  integrity sha512-oJrR8eiwpL7qykn2IeFRduXM4za7z+7yOUEbKVtuDQ/F6htDLHYO6IbzhaJQHV5n6O3adIh4tJvtgPyLyyydqg==
+"@types/sharp@^0.26.0", "@types/sharp@^0.26.1":
+  version "0.26.1"
+  resolved "https://registry.yarnpkg.com/@types/sharp/-/sharp-0.26.1.tgz#92f6b3e65fb02a54ac7027cea0d17cf64f0d2958"
+  integrity sha512-vOFcnP0+aQFDb+ToKVIj8ZV6xQ7pNYGGPeYweLHxyjoQUcIGj8iY9R3OVmJyRR5KUkb0Y4obBbMjoTrBXw6AQA==
   dependencies:
     "@types/node" "*"
 
@@ -24869,7 +24869,7 @@ unist-util-find-after@^3.0.0:
   dependencies:
     unist-util-is "^4.0.0"
 
-unist-util-find@^1.0.1, unist-util-find@^1.0.2:
+unist-util-find@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/unist-util-find/-/unist-util-find-1.0.2.tgz#4d5b01a69fca2a382ad4f55f9865e402129ecf56"
   integrity sha512-ft06UDYzqi9o9RmGP0sZWI/zvLLQiBW2/MD+rW6mDqbOWDcmknGX9orQPspfuGRYWr8eSJAmfsBcvOpfGRJseA==
@@ -26320,10 +26320,10 @@ xss@^1.0.6:
     commander "^2.20.3"
     cssfilter "0.0.10"
 
-xstate@^4.11.0, xstate@^4.13.0, xstate@^4.9.1:
-  version "4.13.0"
-  resolved "https://registry.yarnpkg.com/xstate/-/xstate-4.13.0.tgz#0be22ceb8bae2bc6a025fab330fe44204d76771c"
-  integrity sha512-UnUJJzP2KTPqnmxIoD/ymXtpy/hehZnUlO6EXqWC/72XkPb15p9Oz/X4WhS3QE+by7NP+6b5bCi/GTGFzm5D+A==
+xstate@^4.11.0, xstate@^4.14.0, xstate@^4.9.1:
+  version "4.14.0"
+  resolved "https://registry.yarnpkg.com/xstate/-/xstate-4.14.0.tgz#dd9f3f0af4acd04a01b3ad60d3d4c66c51ac1b5d"
+  integrity sha512-nz+T5rlPl0Vu1L9NZdI7JYVq57k/pKpyLwmztqgcj/HqUVsopnMKBP6cQJCb4Op9TC8kffyJSMwHDFthuRpooQ==
 
 xtend@^4.0.0, xtend@^4.0.1, xtend@^4.0.2, xtend@~4.0.0, xtend@~4.0.1:
   version "4.0.2"
