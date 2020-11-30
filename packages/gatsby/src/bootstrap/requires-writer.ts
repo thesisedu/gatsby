@@ -208,7 +208,7 @@ export const writeAll = async (state: IGatsbyState): Promise<boolean> => {
 
   lastHash = newHash
 
-  // TODO: Remove all "hot" references in this `syncRequires` variable when fast-refresh is the default
+  // TODO: Think of a better workaround for catching unnamed/lowercased components for reloads than a HOC
   const hotImport =
     process.env.GATSBY_HOT_LOADER !== `fast-refresh`
       ? `const { hot } = require("react-hot-loader/root")`
