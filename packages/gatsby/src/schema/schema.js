@@ -1041,7 +1041,7 @@ const addInferredChildOfExtension = ({ schemaComposer, typeComposer }) => {
     const many = maxChildCount > 1
 
     // Add `@childOf` extension automatically unless it is already set for this type
-    if (!childOfExtension?.types.includes(parentTypeName)) {
+    if (!childOfExtension?.types?.includes(parentTypeName)) {
       // Adding children fields to types with the `@dontInfer` extension is deprecated
       // Only warn when the parent-child relation has not been explicitly set with
       if (shouldInfer === false) {
@@ -1062,7 +1062,7 @@ const addInferredChildOfExtension = ({ schemaComposer, typeComposer }) => {
       // This will cause convenience children fields like `childImageSharp`
       // to be added in `addConvenienceChildrenFields` method.
       // Also required for proper printing of the `@childOf` directive in the snapshot plugin
-      if (!childOfExtension) {
+      if (!childOfExtension?.types) {
         // FIXME: `many` is applied to all parent types equally which seems wrong?
         childOfExtension = { types: [] }
         if (many) {
