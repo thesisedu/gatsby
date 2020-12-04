@@ -146,6 +146,9 @@ const updateSchemaComposer = async ({
     inferenceMetadata,
     parentSpan: activity.span,
   })
+  addInferredChildOfExtensions({
+    schemaComposer,
+  })
   activity.end()
 
   activity = report.phantomActivity(`Processing types`, {
@@ -202,11 +205,6 @@ const processTypeComposer = async ({
 
     if (typeComposer.hasInterface(`Node`)) {
       await addNodeInterfaceFields({ schemaComposer, typeComposer, parentSpan })
-      await addImplicitConvenienceChildrenFields({
-        schemaComposer,
-        typeComposer,
-        parentSpan,
-      })
     }
     await determineSearchableFields({
       schemaComposer,
@@ -1004,15 +1002,26 @@ const addConvenienceChildrenFields = ({ schemaComposer }) => {
   })
 }
 
-const addImplicitConvenienceChildrenFields = ({
-  schemaComposer,
-  typeComposer,
-}) => {
+const addInferredChildOfExtensions = ({ schemaComposer }) => {
+  schemaComposer.forEach(typeComposer => {
+    if (
+      typeComposer instanceof ObjectTypeComposer &&
+      typeComposer.hasInterface(`Node`)
+    ) {
+      addInferredChildOfExtension({
+        schemaComposer,
+        typeComposer,
+      })
+    }
+  })
+}
+
+const addInferredChildOfExtension = ({ schemaComposer, typeComposer }) => {
   const shouldInfer = typeComposer.getExtension(`infer`)
-  // In Gatsby v3, when `@dontInfer` is set, children fields will not be
-  // created for parent-child relations set by plugins with
+  // In Gatsby v3, when `@dontInfer` is set, `@childOf` extension will not be
+  // automatically created for parent-child relations set by plugins with
   // `createParentChildLink`. With `@dontInfer`, only parent-child
-  // relations explicitly set with the `childOf` extension will be added.
+  // relations explicitly set with the `@childOf` extension will be added.
   // if (shouldInfer === false) return
 
   const parentTypeName = typeComposer.getTypeName()
@@ -1027,18 +1036,18 @@ const addImplicitConvenienceChildrenFields = ({
       g => g.length
     ).length
 
-    // Adding children fields to types with the `@dontInfer` extension is deprecated
-    if (shouldInfer === false) {
-      const childTypeComposer = schemaComposer.getAnyTC(typeName)
-      const childOfExtension = childTypeComposer.getExtension(`childOf`)
-      const many = maxChildCount > 1
+    const childTypeComposer = schemaComposer.getAnyTC(typeName)
+    let childOfExtension = childTypeComposer.getExtension(`childOf`)
+    const many = maxChildCount > 1
 
-      // Only warn when the parent-child relation has not been explicitly set with
-      if (
-        !childOfExtension ||
-        !childOfExtension.types.includes(parentTypeName) ||
-        !childOfExtension.many === many
-      ) {
+    // Only warn when the parent-child relation has not been explicitly set with
+    if (
+      !childOfExtension ||
+      !childOfExtension.types.includes(parentTypeName) ||
+      childOfExtension.many !== many
+    ) {
+      // Adding children fields to types with the `@dontInfer` extension is deprecated
+      if (shouldInfer === false) {
         const fieldName = many
           ? fieldNames.convenienceChildren(typeName)
           : fieldNames.convenienceChild(typeName)
@@ -1052,12 +1061,21 @@ const addImplicitConvenienceChildrenFields = ({
             `\`childOf\` extension will be added.\n`
         )
       }
-    }
-
-    if (maxChildCount > 1) {
-      typeComposer.addFields(createChildrenField(typeName))
-    } else {
-      typeComposer.addFields(createChildField(typeName))
+      // Set `@childOf` extension automatically
+      // This will cause convenience children fields like `childImageSharp`
+      // to be added in `addConvenienceChildrenFields` method.
+      // Also required for proper printing of the `@childOf` directive in the snapshot plugin
+      if (!childOfExtension) {
+        // FIXME: `many` is applied to all parent types equally which seems wrong?
+        childOfExtension = { types: [] }
+        if (many) {
+          childOfExtension.many = many
+        }
+      }
+      if (!childOfExtension.types.includes(parentTypeName)) {
+        childOfExtension.types.push(parentTypeName)
+      }
+      childTypeComposer.setExtension(`childOf`, childOfExtension)
     }
   })
 }
