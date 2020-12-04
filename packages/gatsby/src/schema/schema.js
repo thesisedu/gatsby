@@ -1040,13 +1040,10 @@ const addInferredChildOfExtension = ({ schemaComposer, typeComposer }) => {
     let childOfExtension = childTypeComposer.getExtension(`childOf`)
     const many = maxChildCount > 1
 
-    // Only warn when the parent-child relation has not been explicitly set with
-    if (
-      !childOfExtension ||
-      !childOfExtension.types.includes(parentTypeName) ||
-      childOfExtension.many !== many
-    ) {
+    // Add `@childOf` extension automatically unless it is already set for this type
+    if (!childOfExtension?.types.includes(parentTypeName)) {
       // Adding children fields to types with the `@dontInfer` extension is deprecated
+      // Only warn when the parent-child relation has not been explicitly set with
       if (shouldInfer === false) {
         const fieldName = many
           ? fieldNames.convenienceChildren(typeName)
@@ -1072,9 +1069,7 @@ const addInferredChildOfExtension = ({ schemaComposer, typeComposer }) => {
           childOfExtension.many = many
         }
       }
-      if (!childOfExtension.types.includes(parentTypeName)) {
-        childOfExtension.types.push(parentTypeName)
-      }
+      childOfExtension.types.push(parentTypeName)
       childTypeComposer.setExtension(`childOf`, childOfExtension)
     }
   })
