@@ -484,7 +484,8 @@ exports.createNodesForContentType = ({
               )
             })
 
-          const deprecationReason = `This field got removed due to performance reasons. Please use the new "raw" and "references" fields. See: https://www.gatsbyjs.com/plugins/gatsby-source-contentful/#contentful-rich-text`
+          const deprecationReason = `This field was removed in 
+gatsby-source-contentful v4. Please use the new "raw" and "references" fields. See: https://www.gatsbyjs.com/plugins/gatsby-source-contentful/#contentful-rich-text`
 
           entryItemFields[entryItemFieldKey] = {
             raw: stringify(fieldValue),
