@@ -110,6 +110,7 @@ const ensurePathComponentInSSRBundle = async (
 export const renderDevHTML = ({
   path,
   page,
+  skipSsr = false,
   store,
   htmlComponentRendererPath,
   directory,
@@ -135,7 +136,13 @@ export const renderDevHTML = ({
     createServerVisitedPage(pageObj.componentChunkName)
 
     // Ensure the query has been run and written out.
-    await getPageDataExperimental(pageObj.path)
+    try {
+      await getPageDataExperimental(pageObj.path)
+    } catch {
+      // If we can't get the page, it was probably deleted recently
+      // so let's just do a 404 page.
+      return reject(`404 page`)
+    }
 
     // Wait for public/render-page.js to update w/ the page component.
     const found = await ensurePathComponentInSSRBundle(pageObj, directory)
@@ -150,6 +157,11 @@ export const renderDevHTML = ({
       isClientOnlyPage = true
     }
 
+    // If the user added the query string `skip-ssr`, we always just render an empty shell.
+    if (skipSsr) {
+      isClientOnlyPage = true
+    }
+
     try {
       const htmlString = await worker.renderHTML({
         path,
@@ -158,8 +170,8 @@ export const renderDevHTML = ({
         directory,
         isClientOnlyPage,
       })
-      resolve(htmlString)
+      return resolve(htmlString)
     } catch (error) {
-      reject(error)
+      return reject(error)
     }
   })

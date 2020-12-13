@@ -10,6 +10,7 @@ import graphqlHTTP from "express-graphql"
 import graphqlPlayground from "graphql-playground-middleware-express"
 import graphiqlExplorer from "gatsby-graphiql-explorer"
 import { formatError } from "graphql"
+import { isCI } from "gatsby-core-utils"
 import http from "http"
 import https from "https"
 import cors from "cors"
@@ -27,6 +28,10 @@ import { developStatic } from "../commands/develop-static"
 import withResolverContext from "../schema/context"
 import { websocketManager, WebsocketManager } from "../utils/websocket-manager"
 import {
+  showExperimentNoticeAfterTimeout,
+  CancelExperimentNoticeCallbackOrUndefined,
+} from "../utils/show-experiment-notice"
+import {
   reverseFixedPagePath,
   readPageData,
   IPageDataWithQueryResult,
@@ -40,6 +45,11 @@ import * as path from "path"
 import { Stage, IProgram } from "../commands/types"
 import JestWorker from "jest-worker"
 import { findOriginalSourcePositionAndContent } from "./stack-trace-utils"
+import { appendPreloadHeaders } from "./develop-preload-headers"
+import {
+  routeLoadingIndicatorRequests,
+  writeVirtualLoadingIndicatorModule,
+} from "./loading-indicator"
 
 type ActivityTracker = any // TODO: Replace this with proper type once reporter is typed
 
@@ -47,6 +57,7 @@ interface IServer {
   compiler: webpack.Compiler
   listener: http.Server | https.Server
   webpackActivity: ActivityTracker
+  cancelDevJSNotice: CancelExperimentNoticeCallbackOrUndefined
   websocketManager: WebsocketManager
   workerPool: JestWorker
   webpackWatching: IWebpackWatchingPauseResume
@@ -77,6 +88,28 @@ export async function startServer(
     id: `webpack-develop`,
   })
   webpackActivity.start()
+
+  const THIRTY_SECONDS = 30 * 1000
+  let cancelDevJSNotice: CancelExperimentNoticeCallbackOrUndefined
+  if (
+    process.env.gatsby_executing_command === `develop` &&
+    !process.env.GATSBY_EXPERIMENTAL_PRESERVE_WEBPACK_CACHE &&
+    !isCI()
+  ) {
+    cancelDevJSNotice = showExperimentNoticeAfterTimeout(
+      `Preserve webpack's Cache`,
+      `https://github.com/gatsbyjs/gatsby/discussions/28331`,
+      `which changes Gatsby's cache clearing behavior to not clear webpack's
+cache unless you run "gatsby clean" or delete the .cache folder manually.
+Here's how to try it:
+
+module.exports = {
+  flags: { PRESERVE_WEBPACK_CACHE: true },
+  plugins: [...]
+}`,
+      THIRTY_SECONDS
+    )
+  }
 
   // Remove the following when merging GATSBY_EXPERIMENTAL_DEV_SSR
   const directoryPath = withBasePath(directory)
@@ -206,20 +239,26 @@ export async function startServer(
    * If no GATSBY_REFRESH_TOKEN env var is available, then no Authorization header is required
    **/
   const REFRESH_ENDPOINT = `/__refresh`
-  const refresh = async (req: express.Request): Promise<void> => {
+  const refresh = async (
+    req: express.Request,
+    pluginName?: string
+  ): Promise<void> => {
     emitter.emit(`WEBHOOK_RECEIVED`, {
       webhookBody: req.body,
+      pluginName,
     })
   }
-  app.use(REFRESH_ENDPOINT, express.json())
-  app.post(REFRESH_ENDPOINT, (req, res) => {
+
+  app.post(`${REFRESH_ENDPOINT}/:plugin_name?`, express.json(), (req, res) => {
+    const pluginName = req.params[`plugin_name`]
+
     const enableRefresh = process.env.ENABLE_GATSBY_REFRESH_ENDPOINT
     const refreshToken = process.env.GATSBY_REFRESH_TOKEN
     const authorizedRefresh =
       !refreshToken || req.headers.authorization === refreshToken
 
     if (enableRefresh && authorizedRefresh) {
-      refresh(req)
+      refresh(req, pluginName)
     }
     res.end()
   })
@@ -243,13 +282,22 @@ export async function startServer(
 
       if (page) {
         try {
-          const pageData: IPageDataWithQueryResult = process.env
-            .GATSBY_EXPERIMENTAL_QUERY_ON_DEMAND
-            ? await getPageDataExperimental(page.path)
-            : await readPageData(
-                path.join(store.getState().program.directory, `public`),
-                page.path
-              )
+          let pageData: IPageDataWithQueryResult
+          if (process.env.GATSBY_EXPERIMENTAL_QUERY_ON_DEMAND) {
+            const start = Date.now()
+
+            pageData = await getPageDataExperimental(page.path)
+
+            telemetry.trackCli(`RUN_QUERY_ON_DEMAND`, {
+              name: `getPageData`,
+              duration: Date.now() - start,
+            })
+          } else {
+            pageData = await readPageData(
+              path.join(store.getState().program.directory, `public`),
+              page.path
+            )
+          }
 
           res.status(200).send(pageData)
           return
@@ -401,6 +449,17 @@ export async function startServer(
     route({ app, program, store })
   }
 
+  // loading indicator
+  // write virtual module always to not fail webpack compilation, but only add express route handlers when
+  // query on demand is enabled and loading indicator is not disabled
+  writeVirtualLoadingIndicatorModule()
+  if (
+    process.env.GATSBY_EXPERIMENTAL_QUERY_ON_DEMAND &&
+    process.env.GATSBY_QUERY_ON_DEMAND_LOADING_INDICATOR === `true`
+  ) {
+    routeLoadingIndicatorRequests(app)
+  }
+
   app.use(async (req, res) => {
     const fullUrl = req.protocol + `://` + req.get(`host`) + req.originalUrl
     // This isn't used in development.
@@ -410,6 +469,8 @@ export async function startServer(
     } else if (fullUrl.endsWith(`.json`)) {
       res.json({}).status(404)
     } else {
+      await appendPreloadHeaders(req.path, res)
+
       if (process.env.GATSBY_EXPERIMENTAL_DEV_SSR) {
         try {
           const { renderDevHTML } = require(`./dev-ssr/render-dev-html`)
@@ -467,6 +528,7 @@ export async function startServer(
     compiler,
     listener,
     webpackActivity,
+    cancelDevJSNotice,
     websocketManager,
     workerPool,
     webpackWatching: webpackDevMiddlewareInstance.context.watching,
