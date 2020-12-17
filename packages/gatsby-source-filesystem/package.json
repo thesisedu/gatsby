@@ -1,7 +1,7 @@
 {
-  "name": "gatsby-source-filesystem",
+  "name": "@thesisedu/gatsby-source-filesystem",
   "description": "Gatsby source plugin for building websites from local data. Markdown, JSON, images, YAML, CSV, and dozens of other data types supported.",
-  "version": "2.9.0-next.0",
+  "version": "2.10.0",
   "author": "Kyle Mathews <mathews.kyle@gmail.com>",
   "bugs": {
     "url": "https://github.com/gatsbyjs/gatsby/issues"
@@ -38,7 +38,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/gatsbyjs/gatsby.git",
+    "url": "https://github.com/thesisedu/gatsby.git",
     "directory": "packages/gatsby-source-filesystem"
   },
   "scripts": {
